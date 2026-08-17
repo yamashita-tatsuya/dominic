@@ -1,0 +1,10 @@
+{
+  "name": "dominic-lambda",
+  "version": "1.0.0",
+  "description": "Lambda functions for Dominic portal",
+  "main": "index.js",
+  "dependencies": {
+    "@kintone/rest-api-client": "^3.1.5",
+    "dotenv": "^16.4.5"
+  }
+}
