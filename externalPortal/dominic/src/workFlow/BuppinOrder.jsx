@@ -1,20 +1,23 @@
 import { useEffect, useState } from 'react';
 import {
     Container, CssBaseline, Typography, Box, Divider, Button, Chip, IconButton,
-    TextField, InputAdornment,
-    Dialog, DialogTitle, DialogContent, DialogActions,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    TextField, InputAdornment, Tooltip,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
-import CloseIcon from '@mui/icons-material/Close';
 import { AgGridReact } from 'ag-grid-react';
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from 'ag-grid-community';
 import { useNavigate } from 'react-router-dom';
 import { useLoading } from '../contexts/LoadingContext';
 import { apiPost } from '../https/useApiConnect';
+import PageBreadcrumbs from '../components/PageBreadcrumbs';
+import PageTitle from '../components/PageTitle';
+import DetailDialog from '../components/DetailDialog';
+import { formatDate, formatDateCell } from '../utils/date';
+import { yen } from '../utils/currency';
+import { statusColor } from '../utils/status';
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -41,30 +44,26 @@ const AG_LOCALE_JA = {
 };
 
 // ── セルレンダラー ──────────────────────────────────────────
-const statusColor = (s) => {
-    if (!s) return 'default';
-    if (s.includes('承認') || s.includes('完了')) return 'success';
-    if (s.includes('申請') || s.includes('却下')) return 'error';
-    return 'warning';
-};
-
 const StatusRenderer = ({ value }) =>
     value
         ? <Chip label={value} color={statusColor(value)} size="small" />
         : <span>-</span>;
 
 const CopyButtonRenderer = ({ data, context }) => (
-    <IconButton
-        size="small"
-        title="コピーして新規登録"
-        onClick={(e) => {
-            e.stopPropagation();
-            context.navigate('/bupin/new', { state: { copyFrom: data._record } });
-        }}
-        sx={{ color: 'primary.main' }}
-    >
-        <ContentCopyIcon fontSize="small" />
-    </IconButton>
+    <Tooltip title="コピーして新規登録">
+        <span>
+            <IconButton
+                size="small"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    context.navigate('/bupin/new', { state: { copyFrom: data._record } });
+                }}
+                sx={{ color: 'primary.main' }}
+            >
+                <ContentCopyIcon fontSize="small" />
+            </IconButton>
+        </span>
+    </Tooltip>
 );
 
 // ── カラム定義 ──────────────────────────────────────────────
@@ -81,117 +80,48 @@ const COL_DEFS = [
     { field: 'レコード番号', headerName: 'No.',      width: 80,  hide: true },
     { field: '品名',         headerName: '品名',      hide: true }, // quickFilter用
     {
+        field: '注文日時',
+        headerName: '注文日',
+        width: 130,
+        valueFormatter: formatDateCell,
+    },
+    {
         field: 'ステータス',
         headerName: 'ステータス',
         width: 130,
         cellRenderer: StatusRenderer,
         cellStyle: { display: 'flex', alignItems: 'center' },
     },
-    { field: '注文者',     headerName: '注文者',    flex: 1 },
-    { field: '学年クラス', headerName: '学年クラス', flex: 1 },
+    { field: '注文者',     headerName: '注文者',    flex: 1, minWidth: 140 },
+    { field: '学年クラス', headerName: '学年クラス', flex: 1, minWidth: 140 },
     { field: '区分',       headerName: '区分',       width: 100 },
     { field: '対象',       headerName: '対象',       width: 120 },
-    { field: '費用科目',   headerName: '費用科目',   flex: 1 },
+    { field: '費用科目',   headerName: '費用科目',   flex: 1, minWidth: 160 },
     { field: '使用予定日', headerName: '使用予定日', width: 120 },
 ];
 
-// ── 詳細ダイアログ ──────────────────────────────────────────
-const DetailDialog = ({ record, onClose }) => {
-    if (!record) return null;
-    const meisai = record['明細']?.value ?? [];
+// ── 詳細ダイアログ用データ生成 ──────────────────────────────
+const buildInfo = (record) => [
+    ['注文日',     formatDate(record['注文日時']?.value)],
+    ['区分',       record['区分']?.value],
+    ['費用科目',   record['費用科目']?.value],
+    ['対象',       record['対象']?.value],
+    ['学年クラス', record['学年クラス']?.value],
+    ['使用予定日', record['使用予定日']?.value],
+    ['使用目的',   record['使用目的']?.value],
+    ['備考',       record['備考']?.value],
+].filter(([, v]) => v);
 
-    const info = [
-        ['注文者',     record['注文者']?.value],
-        ['学年クラス', record['学年クラス']?.value],
-        ['区分',       record['区分']?.value],
-        ['対象',       record['対象']?.value],
-        ['費用科目',   record['費用科目']?.value],
-        ['使用予定日', record['使用予定日']?.value],
-        ['使用目的',   record['使用目的']?.value],
-        ['備考',       record['備考']?.value],
-        ['その他',     record['その他']?.value],
-    ].filter(([, v]) => v);
-
-    return (
-        <Dialog open onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                詳細　No.{record['レコード番号']?.value}
-                {record['ステータス']?.value && (
-                    <Chip
-                        label={record['ステータス'].value}
-                        color={statusColor(record['ステータス'].value)}
-                        size="small"
-                        sx={{ ml: 1 }}
-                    />
-                )}
-                <IconButton size="small" onClick={onClose} sx={{ ml: 'auto' }}>
-                    <CloseIcon />
-                </IconButton>
-            </DialogTitle>
-
-            <DialogContent dividers>
-                {/* 基本情報 */}
-                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 2 }}>
-                    {info.map(([label, val]) => (
-                        <Box key={label} sx={{ minWidth: 160 }}>
-                            <Typography variant="caption" color="text.secondary">{label}</Typography>
-                            <Typography variant="body2">{val}</Typography>
-                        </Box>
-                    ))}
-                </Box>
-
-                {/* 明細テーブル */}
-                {meisai.length > 0 && (
-                    <>
-                        <Typography variant="subtitle2" sx={{ mb: 1 }}>明細</Typography>
-                        <TableContainer component={Paper} variant="outlined">
-                            <Table size="small">
-                                <TableHead>
-                                    <TableRow sx={{ backgroundColor: '#f0f0f0' }}>
-                                        <TableCell>品名・規格No</TableCell>
-                                        <TableCell>注文先</TableCell>
-                                        <TableCell align="right">A組</TableCell>
-                                        <TableCell align="right">B組</TableCell>
-                                        <TableCell align="right">C組</TableCell>
-                                        <TableCell align="right">教員</TableCell>
-                                        <TableCell align="right">単価</TableCell>
-                                        <TableCell align="right">合計金額</TableCell>
-                                    </TableRow>
-                                </TableHead>
-                                <TableBody>
-                                    {meisai.map((row, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell>{row.value['品名・規格No']?.value}</TableCell>
-                                            <TableCell>{row.value['注文先']?.value}</TableCell>
-                                            <TableCell align="right">{row.value['A組']?.value}</TableCell>
-                                            <TableCell align="right">{row.value['B組']?.value}</TableCell>
-                                            <TableCell align="right">{row.value['C組']?.value}</TableCell>
-                                            <TableCell align="right">{row.value['教員']?.value}</TableCell>
-                                            <TableCell align="right">
-                                                {row.value['単価']?.value
-                                                    ? `¥${Number(row.value['単価'].value).toLocaleString()}`
-                                                    : ''}
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                {row.value['合計金額']?.value
-                                                    ? `¥${Number(row.value['合計金額'].value).toLocaleString()}`
-                                                    : ''}
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-                    </>
-                )}
-            </DialogContent>
-
-            <DialogActions>
-                <Button onClick={onClose}>閉じる</Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
+const MEISAI_COLUMNS = [
+    { header: '品名・規格No', value: (v) => v['品名・規格No']?.value },
+    { header: '注文先',       value: (v) => v['注文先']?.value },
+    { header: 'A組', align: 'right', value: (v) => v['A組']?.value },
+    { header: 'B組', align: 'right', value: (v) => v['B組']?.value },
+    { header: 'C組', align: 'right', value: (v) => v['C組']?.value },
+    { header: '教員', align: 'right', value: (v) => v['教員']?.value },
+    { header: '単価', align: 'right', value: (v) => yen(v['単価']?.value) },
+    { header: '合計金額', align: 'right', value: (v) => yen(v['合計金額']?.value) },
+];
 
 // ── メインコンポーネント ────────────────────────────────────
 const BuppinOrder = () => {
@@ -220,6 +150,7 @@ const BuppinOrder = () => {
 
     const rowData = records.map(r => ({
         レコード番号: r['レコード番号']?.value,
+        注文日時:     r['注文日時']?.value,
         注文者:       r['注文者']?.value,
         学年クラス:   r['学年クラス']?.value,
         区分:         r['区分']?.value,
@@ -238,11 +169,9 @@ const BuppinOrder = () => {
         <Container component="main" maxWidth="xl">
             <CssBaseline />
             <Box sx={{ mt: 4, mb: 8 }}>
+                <PageBreadcrumbs items={[{ label: '物品注文' }]} />
                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <ShoppingCartIcon />
-                        <Typography variant="h5">物品注文</Typography>
-                    </Box>
+                    <PageTitle icon={ShoppingCartIcon} sx={{ mb: 0 }}>物品注文</PageTitle>
                     <Button variant="contained" startIcon={<AddIcon />} onClick={() => navigate('/bupin/new')}>
                         新規注文
                     </Button>
@@ -255,7 +184,7 @@ const BuppinOrder = () => {
 
                 <TextField
                     size="small"
-                    placeholder="品名で検索"
+                    placeholder="かんたん検索"
                     value={quickFilter}
                     onChange={e => setQuickFilter(e.target.value)}
                     sx={{ mb: 1, width: 280 }}
@@ -277,7 +206,7 @@ const BuppinOrder = () => {
                         columnDefs={COL_DEFS}
                         context={{ navigate }}
                         rowHeight={48}
-                        defaultColDef={{ sortable: true, filter: true, resizable: true }}
+                        defaultColDef={{ sortable: true, filter: true, resizable: true, minWidth: 100 }}
                         quickFilterText={quickFilter}
                         localeText={AG_LOCALE_JA}
                         overlayNoRowsTemplate="<span>データがありません</span>"
@@ -291,10 +220,16 @@ const BuppinOrder = () => {
                 </div>
             </Box>
 
-            <DetailDialog
-                record={selectedRecord}
-                onClose={() => setSelectedRecord(null)}
-            />
+            {selectedRecord && (
+                <DetailDialog
+                    open
+                    title="注文詳細"
+                    onClose={() => setSelectedRecord(null)}
+                    status={selectedRecord['ステータス']?.value}
+                    info={buildInfo(selectedRecord)}
+                    meisai={{ columns: MEISAI_COLUMNS, rows: selectedRecord['明細']?.value ?? [] }}
+                />
+            )}
         </Container>
     );
 };

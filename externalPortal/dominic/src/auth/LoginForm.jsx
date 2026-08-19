@@ -41,6 +41,7 @@ function LoginForm() {
             }
             authData.setToken(response.token);
             authData.setUserId(response.user.id);
+            authData.setUserName(response.user.name);
             navigate(from, { replace: true });
         } catch (err) {
             console.error('Login failed:', err);

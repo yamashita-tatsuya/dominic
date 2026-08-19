@@ -2,16 +2,21 @@ import { useState, useContext, useRef } from 'react';
 import {
     Container, CssBaseline, Typography, Box, Paper, Divider,
     TextField, MenuItem, Button, IconButton, Table, TableBody,
-    TableCell, TableContainer, TableHead, TableRow, Alert, Chip,
+    TableCell, TableContainer, TableHead, TableRow, Alert, Chip, Tooltip,
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import AttachFileIcon from '@mui/icons-material/AttachFile';
+import ShoppingCartIcon from '@mui/icons-material/ShoppingCart';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useLoading } from '../contexts/LoadingContext';
 import { apiPost } from '../https/useApiConnect';
 import AuthContext from '../main';
+import PageBreadcrumbs from '../components/PageBreadcrumbs';
+import PageTitle from '../components/PageTitle';
+import FormActions from '../components/FormActions';
+import { yen } from '../utils/currency';
 
 // Kintone レコード → フォーム初期値に変換
 const recordToForm = (r) => ({
@@ -163,7 +168,8 @@ const BuppinNewOrder = () => {
         <Container component="main" maxWidth="xl">
             <CssBaseline />
             <Box sx={{ mt: 4, mb: 8 }}>
-                <Typography variant="h5" sx={{ mb: 2 }}>物品注文　新規登録</Typography>
+                <PageBreadcrumbs items={[{ label: '物品注文', to: '/bupin' }, { label: '新規登録' }]} />
+                <PageTitle icon={ShoppingCartIcon}>物品注文　新規登録</PageTitle>
                 <Divider sx={{ mb: 3 }} />
 
                 {error   && <Alert severity="error"   sx={{ mb: 2 }}>{error}</Alert>}
@@ -289,7 +295,12 @@ const BuppinNewOrder = () => {
                     <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
                             <Typography variant="subtitle1" fontWeight="bold">明細</Typography>
-                            <Button startIcon={<AddCircleOutlineIcon />} onClick={addRow} size="small">
+                            <Button
+                                variant="outlined"
+                                startIcon={<AddCircleOutlineIcon />}
+                                onClick={addRow}
+                                size="large"
+                            >
                                 行を追加
                             </Button>
                         </Box>
@@ -303,7 +314,7 @@ const BuppinNewOrder = () => {
                                         <TableCell sx={{ color: 'white', width: 70 }} align="center">B組</TableCell>
                                         <TableCell sx={{ color: 'white', width: 70 }} align="center">C組</TableCell>
                                         <TableCell sx={{ color: 'white', width: 70 }} align="center">教員</TableCell>
-                                        <TableCell sx={{ color: 'white', width: 90 }} align="right">単価(¥)</TableCell>
+                                        <TableCell sx={{ color: 'white', width: 90 }} align="right">単価（¥）</TableCell>
                                         <TableCell sx={{ color: 'white', width: 100 }} align="right">合計金額</TableCell>
                                         <TableCell sx={{ color: 'white', width: 40 }} />
                                     </TableRow>
@@ -344,13 +355,17 @@ const BuppinNewOrder = () => {
                                                 />
                                             </TableCell>
                                             <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                                                {row['合計金額'] !== '' ? `¥${Number(row['合計金額']).toLocaleString()}` : ''}
+                                                {yen(row['合計金額'])}
                                             </TableCell>
                                             <TableCell align="center">
-                                                <IconButton size="small" onClick={() => removeRow(i)}
-                                                    disabled={rows.length === 1} color="error">
-                                                    <DeleteOutlineIcon fontSize="small" />
-                                                </IconButton>
+                                                <Tooltip title="行を削除">
+                                                    <span>
+                                                        <IconButton size="small" onClick={() => removeRow(i)}
+                                                            disabled={rows.length === 1} color="error">
+                                                            <DeleteOutlineIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </span>
+                                                </Tooltip>
                                             </TableCell>
                                         </TableRow>
                                     ))}
@@ -367,10 +382,7 @@ const BuppinNewOrder = () => {
                         />
                     </Paper>
 
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                        <Button variant="outlined" onClick={() => navigate('/bupin')}>キャンセル</Button>
-                        <Button type="submit" variant="contained">登録する</Button>
-                    </Box>
+                    <FormActions onCancel={() => navigate('/bupin')} />
                 </Box>
             </Box>
         </Container>

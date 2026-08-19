@@ -53,7 +53,7 @@ const Header = () => {
                                 color="inherit"
                                 onClick={handleMenuOpen}
                             >
-                                アカウント ▽
+                                {authData.userName || authData.userId} さん ▽
                             </Button>
                             <Menu
                                 anchorEl={anchorEl}
@@ -64,6 +64,7 @@ const Header = () => {
                                     handleMenuClose();
                                     authData.setToken('');
                                     authData.setUserId('');
+                                    authData.setUserName('');
                                     navigate('/');
                                 }}>
                                     ログアウト

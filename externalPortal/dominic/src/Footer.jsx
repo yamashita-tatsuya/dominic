@@ -13,7 +13,7 @@ const Footer = () => {
     return (
         <footer>
             <div style={footerContentStyle}>
-                お問い合わせは〇〇まで、お電話ください。
+                お問い合わせはゆびすいまでご連絡ください。
             </div>
         </footer>
     );

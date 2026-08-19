@@ -9,8 +9,11 @@ import Home from './Home.jsx';
 import BuppinOrder from './workFlow/BuppinOrder.jsx';
 import BuppinNewOrder from './workFlow/BuppinNewOrder.jsx';
 import Shucchou from './workFlow/Shucchou.jsx';
+import ShucchouNewOrder from './workFlow/ShucchouNewOrder.jsx';
 import Shukkin from './workFlow/Shukkin.jsx';
+import ShukkinNewOrder from './workFlow/ShukkinNewOrder.jsx';
 import Karibarai from './workFlow/Karibarai.jsx';
+import KaribaraiNewOrder from './workFlow/KaribaraiNewOrder.jsx';
 import './App.css';
 
 function App() {
@@ -28,8 +31,11 @@ function App() {
               <Route path="/bupin" element={<RequireAuth><BuppinOrder /></RequireAuth>} />
               <Route path="/bupin/new" element={<RequireAuth><BuppinNewOrder /></RequireAuth>} />
               <Route path="/shucchou" element={<RequireAuth><Shucchou /></RequireAuth>} />
+              <Route path="/shucchou/new" element={<RequireAuth><ShucchouNewOrder /></RequireAuth>} />
               <Route path="/shukkin" element={<RequireAuth><Shukkin /></RequireAuth>} />
+              <Route path="/shukkin/new" element={<RequireAuth><ShukkinNewOrder /></RequireAuth>} />
               <Route path="/karibarai" element={<RequireAuth><Karibarai /></RequireAuth>} />
+              <Route path="/karibarai/new" element={<RequireAuth><KaribaraiNewOrder /></RequireAuth>} />
             </Routes>
           </div>
           <Footer />

@@ -19,6 +19,7 @@ const theme = createTheme({
 
 function Root() {
   const [userId, setUserId] = useState(() => Cookies.get("userId") || "");
+  const [userName, setUserName] = useState(() => Cookies.get("userName") || "");
   const [token, setToken] = useState(() => Cookies.get("token") || "");
   const [loadingAuth, setLoadingAuth] = useState(true);
 
@@ -36,9 +37,16 @@ function Root() {
     else Cookies.remove("userId");
   }, [userId]);
 
+  useEffect(() => {
+    if (userName) Cookies.set("userName", userName, { secure: true, sameSite: 'Strict' });
+    else Cookies.remove("userName");
+  }, [userName]);
+
   const authData = {
     userId,
     setUserId,
+    userName,
+    setUserName,
     token,
     setToken,
     loadingAuth,

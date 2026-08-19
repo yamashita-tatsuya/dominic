@@ -34,7 +34,7 @@ exports.handler = async (data) => {
         const response = await client.record.getRecords({
             app: KINTONE_APP_ID,
             query: `社員番号 = "${id}" and パスワード = "${password}"`,
-            fields: ['レコード番号', '社員番号', '姓', '名'],
+            fields: ['レコード番号', '社員番号', '氏名'],
         });
         records = response.records;
     } catch (err) {
@@ -48,15 +48,14 @@ exports.handler = async (data) => {
     }
 
     const record = records[0];
-    const lastName  = record['姓']?.value  || '';
-    const firstName = record['名']?.value  || '';
+    const name      = record['氏名']?.value || '';
     const recordId  = record['レコード番号']?.value || '';
 
     // セッショントークン生成（HMAC-SHA256）
     const payload = JSON.stringify({
         id,
         recordId,
-        name: `${lastName} ${firstName}`,
+        name,
         iat: Date.now(),
     });
     const token = crypto
@@ -68,7 +67,7 @@ exports.handler = async (data) => {
         token,
         user: {
             id,
-            name: `${lastName} ${firstName}`,
+            name,
             recordId,
         },
     };
